@@ -1,0 +1,9 @@
+llama-index-core>=0.14.22
+llama-index-llms-ollama>=0.10.1
+llama-index-embeddings-dashscope
+llama-index-vector-stores-chroma>=0.4.0
+llama-index-readers-file>=0.4.0
+chromadb>=0.6.0
+gradio>=5.0.0
+python-dotenv>=1.0.0
+rank-bm25>=0.2.2
