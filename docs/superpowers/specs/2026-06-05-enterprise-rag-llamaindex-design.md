@@ -260,8 +260,8 @@ from llama_index.core import SimpleDirectoryReader
 | `POST` | `/api/upload` | 上传文件 | `multipart/form-data` (file) | `{file_id, filename, chunks_count, status}` |
 | `GET` | `/api/documents` | 获取文档列表 | - | `[{file_id, filename, upload_time, chunks_count}]` |
 | `DELETE` | `/api/documents/{file_id}` | 删除文档及向量数据 | - | `{status: "ok"}` |
-| `POST` | `/api/chat` | 发送提问 | `{question: str, strategy: str}` | SSE 流式响应 |
-| `GET` | `/api/config` | 获取可用配置 | - | `{strategies: [...], default: "rerank"}` |
+| `POST` | `/api/chat` | 发送提问 | `{question: str, strategy: str, use_rerank: bool}` | SSE 流式响应 |
+| `GET` | `/api/config` | 获取可用配置 | - | `{strategies: [...], default: "basic", rerank_enabled: true}` |
 | `GET` | `/api/stats` | 获取运行统计 | - | `{documents, chunks, queries, tokens_used}` |
 
 ### 5.2 服务层设计
@@ -291,11 +291,11 @@ from llama_index.core import SimpleDirectoryReader
 
 #### `query_service.py`（核心）
 - RAGWorkflow 事件驱动检索流水线
-- 4种检索策略实现：
+- 3种检索策略 + 可选Re-ranking叠加：
   - **BASIC**: 直接向量相似度检索 (top_k=20)
   - **HYDE**: HyDEQueryTransform 生成假设文档后检索
   - **SENTENCE_WINDOW**: SentenceWindowNodeParser + MetadataReplacementPostProcessor
-  - **RE_RANKING**: SentenceTransformerRerank / CrossEncoderRerank 精排
+  - **RE_RANKING (叠加层)**: 可选开启，SentenceTransformerRerank / CrossEncoderRerank 精排，可叠加在任意检索策略之上
 - 查询重写（始终启用）
 - ChatMemoryBuffer 多轮对话管理 (token_limit=3000)
 - System Prompt 工程（角色设定 + 引用格式 + 约束规则）
@@ -306,7 +306,8 @@ from llama_index.core import SimpleDirectoryReader
 ```python
 class ChatRequest(BaseModel):
     question: str
-    strategy: str = "rerank"  # basic | hyde | window | rerank
+    strategy: str = "basic"     # basic | hyde | window
+    use_rerank: bool = True     # Re-ranking 可叠加在任意检索策略上
 
 class ChatEvent(BaseModel):
     type: str       # thinking | sources | token | done | error
@@ -326,8 +327,9 @@ class UploadResponse(BaseModel):
     status: str
 
 class AppConfig(BaseModel):
-    strategies: list[str]
-    default_strategy: str
+    strategies: list[str]           # ["basic", "hyde", "window"]
+    default_strategy: str           # "basic"
+    rerank_enabled: bool            # True (Re-ranking 可叠加)
     llm_model: str
     embedding_model: str
 ```
@@ -342,17 +344,20 @@ Step 1: 查询重写 (Query Rewriting)
    │  用DeepSeek将口语化提问重写为检索友好形式
    │  例: "这个产品咋用?" → "产品的使用方法和操作指南"
    ▼
-Step 2: 策略检索 (按所选策略执行)
+Step 2: 策略检索 (3选1)
    │  ├─ BASIC: 直接向量相似度 top_k=20
    │  ├─ HYDE: LLM生成假设答案 → embedding假设文档 → 检索
-   │  ├─ SENTENCE_WINDOW: 检索小chunk → 扩展上下文窗口
-   │  └─ RE_RANKING: 初检top_k=20 → CrossEncoder精排 → top_n=5
+   │  └─ SENTENCE_WINDOW: 检索小chunk → 扩展上下文窗口
    ▼
-Step 3: 上下文组装
+Step 3: Re-ranking (可选叠加层)
+   │  若 use_rerank=true: CrossEncoder精排 → top_n=5
+   │  若 use_rerank=false: 直接使用Step 2结果
+   ▼
+Step 4: 上下文组装
    │  ChatMemoryBuffer 历史消息拼接
    │  System Prompt 注入
    ▼
-Step 4: 流式生成
+Step 5: 流式生成
    │  DeepSeek streaming response
    │  SSE事件推送: thinking → sources → tokens → done
    ▼
@@ -403,10 +408,11 @@ Step 4: 流式生成
 │                │  │    [来源: 产品手册.pdf]       │    │
 │  ──────────── │  └─────────────────────────────┘    │
 │  检索策略:     │                                     │
-│  ○ 基础检索    │                                     │
-│  ● Re-ranking  │                                     │
+│  ● 基础检索    │                                     │
 │  ○ HyDE       │                                     │
 │  ○ 句子窗口    │                                     │
+│                │                                     │
+│  ☑ Re-ranking  │                                     │
 │                │                                     │
 ├────────────────┴─────────────────────────────────────┤
 │  [📎]  输入问题...                          [发送 ▶]  │
@@ -429,7 +435,8 @@ Step 4: 流式生成
    - 回答底部展示引用来源列表（文件名+相关度得分）
 
 3. **策略切换**
-   - 左侧单选按钮组，4种策略可选
+   - 检索策略：单选按钮组，3种可选（基础/HyDE/句子窗口）
+   - Re-ranking：独立复选框，可叠加在任意检索策略上
    - 切换后下次提问生效
    - 每种策略有简短说明tooltip
 
@@ -471,7 +478,8 @@ CHUNK_OVERLAP=50
 TOP_K=20
 TOP_N=5
 CHAT_TOKEN_LIMIT=3000
-DEFAULT_STRATEGY=rerank
+DEFAULT_STRATEGY=basic
+DEFAULT_USE_RERANK=true
 
 # 文件上传限制
 MAX_FILE_SIZE_MB=50
