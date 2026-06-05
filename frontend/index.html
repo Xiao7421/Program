@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级RAG知识库助手</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>🏢 企业级RAG知识库助手</h1>
+            <div class="header-stats">
+                <span id="stat-docs">📄 0 文档</span>
+                <span id="stat-chunks">📦 0 分块</span>
+                <span id="stat-milvus" class="status-dot disconnected">Milvus</span>
+            </div>
+        </header>
+
+        <div class="main">
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h2>📁 知识库管理</h2>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📤</div>
+                        <p>拖拽文件到此处或点击上传</p>
+                        <p class="upload-hint">支持 .txt / .pdf / .md</p>
+                        <input type="file" id="fileInput" accept=".txt,.pdf,.md,.markdown" hidden>
+                    </div>
+                    <div id="uploadProgress" class="upload-progress hidden">
+                        <div class="progress-bar"><div class="progress-fill"></div></div>
+                        <span id="uploadStatus">上传中...</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>📋 文件列表</h3>
+                    <div id="docList" class="doc-list">
+                        <p class="empty-hint">暂无文档</p>
+                    </div>
+                    <button id="deleteSelectedBtn" class="btn btn-danger btn-sm hidden">🗑️ 删除选中</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>🔍 检索策略</h3>
+                    <div class="strategy-group">
+                        <label class="radio-label" title="直接向量相似度检索，速度最快">
+                            <input type="radio" name="strategy" value="basic" checked>
+                            <span>基础检索</span>
+                        </label>
+                        <label class="radio-label" title="先生成假设答案文档，再用其嵌入检索，提升语义匹配">
+                            <input type="radio" name="strategy" value="hyde">
+                            <span>HyDE 假设文档</span>
+                        </label>
+                        <label class="radio-label" title="检索小块文本后扩展上下文窗口，兼顾精确和完整">
+                            <input type="radio" name="strategy" value="window">
+                            <span>句子窗口</span>
+                        </label>
+                    </div>
+                    <label class="checkbox-label" title="交叉编码器精排，可叠加在任意检索策略上">
+                        <input type="checkbox" id="useRerank" checked>
+                        <span>☑ Re-ranking 重排序</span>
+                    </label>
+                </div>
+            </aside>
+
+            <main class="chat-area">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <p>你好！我是企业知识库助手。请先在左侧上传文档，然后向我提问。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="input-row">
+                        <textarea id="questionInput" placeholder="输入你的问题..." rows="1"></textarea>
+                        <button id="sendBtn" class="btn btn-primary" title="发送 (Enter)">▶ 发送</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
