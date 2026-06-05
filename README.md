@@ -117,12 +117,15 @@ docker compose up -d
 ### 4. 启动后端
 
 ```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### 5. 访问应用
 
 浏览器打开 **http://localhost:8000**
+
+> 说明：FastAPI 同时托管前端静态文件，前后端共用 8000 端口，无需单独启动前端服务。
 
 ## 📡 API 接口
 
