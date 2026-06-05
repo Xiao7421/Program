@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     max_file_size_mb: int = 50
     upload_dir: str = "./uploads"
 
+    # Embedding
+    embedding_dim: int = 1536
+
     # Defaults
     default_strategy: str = "basic"
     default_use_rerank: bool = True

@@ -114,12 +114,12 @@ async def chat_endpoint(request: ChatRequest):
         # 2. Sources event
         yield f"data: {json_module.dumps({'type': 'sources', 'content': sources}, ensure_ascii=False)}\n\n"
 
-        # 3. Stream LLM response
+        # 3. Stream LLM response (async to avoid blocking event loop)
         try:
             llm = get_llm()
-            response = llm.stream_complete(prompt)
+            response = await llm.astream_complete(prompt)
             full_response = ""
-            for chunk in response:
+            async for chunk in response:
                 delta = chunk.delta
                 if delta:
                     full_response += delta

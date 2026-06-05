@@ -45,7 +45,7 @@ def get_vector_store() -> MilvusVectorStore:
         _vector_store = MilvusVectorStore(
             uri=f"http://{settings.milvus_host}:{settings.milvus_port}",
             collection_name=settings.milvus_collection,
-            dim=1536,
+            dim=settings.embedding_dim,
             overwrite=False,
         )
     return _vector_store

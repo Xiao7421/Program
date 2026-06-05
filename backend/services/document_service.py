@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from llama_index.core import Document, Settings
-from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.node_parser import SentenceWindowNodeParser
 from llama_index.core.ingestion import IngestionPipeline
 
 from config import get_settings
@@ -79,10 +79,13 @@ def ingest_file(filepath: str, filename: str) -> dict:
         },
     )
 
-    # Build IngestionPipeline with SentenceSplitter
-    node_parser = SentenceSplitter(
-        chunk_size=settings.chunk_size,
-        chunk_overlap=settings.chunk_overlap,
+    # Build IngestionPipeline with SentenceWindowNodeParser
+    # This creates small chunks for precise retrieval, with a "window" metadata
+    # field containing surrounding context for the Sentence Window strategy
+    node_parser = SentenceWindowNodeParser(
+        window_size=3,
+        window_metadata_key="window",
+        original_text_metadata_key="original_text",
     )
 
     pipeline = IngestionPipeline(
