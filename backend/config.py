@@ -1,6 +1,11 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
 import os
+
+# Find project root (parent of backend/) and locate .env
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = str(PROJECT_ROOT / ".env")
 
 
 class Settings(BaseSettings):
@@ -36,9 +41,7 @@ class Settings(BaseSettings):
     default_use_rerank: bool = True
 
     model_config = {
-        "env_file": os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), ".env"
-        ),
+        "env_file": ENV_FILE,
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }

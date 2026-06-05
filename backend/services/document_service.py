@@ -14,8 +14,9 @@ from services.index_service import get_vector_store, reset_vector_index
 
 ALLOWED_EXTENSIONS = {".txt", ".pdf", ".md", ".markdown"}
 
-REGISTRY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-REGISTRY_FILE = os.path.join(REGISTRY_DIR, "documents.json")
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+REGISTRY_DIR = str(BACKEND_DIR / "data")
+REGISTRY_FILE = str(BACKEND_DIR / "data" / "documents.json")
 
 
 def _load_registry() -> dict:

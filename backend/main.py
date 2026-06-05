@@ -1,5 +1,6 @@
 import os
 import asyncio
+from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
@@ -31,7 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+BACKEND_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BACKEND_DIR.parent
+FRONTEND_DIR = str(PROJECT_ROOT / "frontend")
 
 
 @app.on_event("startup")
@@ -56,7 +59,7 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=error)
 
     # Save to uploads directory
-    upload_dir = os.path.join(os.path.dirname(__file__), settings.upload_dir)
+    upload_dir = str(BACKEND_DIR / "uploads")
     os.makedirs(upload_dir, exist_ok=True)
     filepath = os.path.join(upload_dir, file.filename)
     with open(filepath, "wb") as f:
