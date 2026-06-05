@@ -6,9 +6,9 @@ pydantic-settings>=2.0.0
 
 # LlamaIndex Core + Plugins
 llama-index>=0.11.0
-llama-index-llms-openai-like
-llama-index-embeddings-dashscope
-llama-index-vector-stores-milvus
+llama-index-llms-openai-like>=0.2.0,<1.0
+llama-index-embeddings-dashscope>=0.2.0,<1.0
+llama-index-vector-stores-milvus>=0.2.0,<1.0
 pymilvus>=2.4.0
 
 # Reranker
