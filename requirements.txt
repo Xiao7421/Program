@@ -1,0 +1,18 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
+pydantic-settings>=2.0.0
+
+# LlamaIndex Core + Plugins
+llama-index>=0.11.0
+llama-index-llms-openai-like
+llama-index-embeddings-dashscope
+llama-index-vector-stores-milvus
+pymilvus>=2.4.0
+
+# Reranker
+sentence-transformers>=2.6.0
+
+# File parsing
+pypdf>=4.0.0
