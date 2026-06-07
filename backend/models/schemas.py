@@ -6,7 +6,7 @@ from typing import Optional
 class ChatRequest(BaseModel):
     question: str
     strategy: str = "basic"       # basic | hyde | window
-    use_rerank: bool = True
+    use_rerank: bool = False      # 默认关闭，前端可开启
 
 
 class DocumentInfo(BaseModel):

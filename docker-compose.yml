@@ -21,7 +21,7 @@ services:
       - minio_data:/minio_data
 
   milvus-standalone:
-    image: milvusdb/milvus:v2.4-latest
+    image: milvusdb/milvus:v2.4.18
     container_name: milvus-standalone
     ports:
       - "19530:19530"

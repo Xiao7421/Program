@@ -1,7 +1,7 @@
 const state = {
     isStreaming: false,
     currentStrategy: 'basic',
-    useRerank: true,
+    useRerank: false,
 };
 
 const $ = (sel) => document.querySelector(sel);

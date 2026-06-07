@@ -118,14 +118,14 @@ docker compose up -d
 
 ```bash
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 ### 5. 访问应用
 
-浏览器打开 **http://localhost:8000**
+浏览器打开 **http://localhost:8080**
 
-> 说明：FastAPI 同时托管前端静态文件，前后端共用 8000 端口，无需单独启动前端服务。
+> 说明：FastAPI 同时托管前端静态文件，前后端共用 8080 端口，无需单独启动前端服务。端口 8000 被 Milvus Attu 占用，这里使用 8080。
 
 ## 📡 API 接口
 
@@ -178,7 +178,7 @@ curl -X POST http://localhost:8000/api/chat \
 | `MAX_FILE_SIZE_MB` | 50 | 单文件上传大小限制 |
 | `EMBEDDING_DIM` | 1536 | 嵌入向量维度 (DashScope v2) |
 | `DEFAULT_STRATEGY` | basic | 默认检索策略 |
-| `DEFAULT_USE_RERANK` | true | 默认是否启用 Rerank |
+| `DEFAULT_USE_RERANK` | false | 默认是否启用 Rerank |
 
 ## 🛠️ 技术栈
 

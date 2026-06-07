@@ -1,9 +1,9 @@
 .env
 __pycache__/
 *.pyc
-backend/uploads/*
+backend/uploads/**
 !backend/uploads/.gitkeep
-backend/data/*
+backend/data/**
 !backend/data/.gitkeep
 .venv/
 *.egg-info/

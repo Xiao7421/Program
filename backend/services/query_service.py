@@ -1,8 +1,8 @@
 from llama_index.core import Settings, PromptTemplate
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.postprocessor import MetadataReplacementPostProcessor
-from llama_index.core.postprocessor import SentenceTransformerRerank
 from llama_index.core.schema import NodeWithScore
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 from config import get_settings
 from services.index_service import get_vector_index
@@ -31,7 +31,6 @@ def get_chat_memory() -> ChatMemoryBuffer:
         settings = get_settings()
         _chat_memory = ChatMemoryBuffer.from_defaults(
             token_limit=settings.chat_token_limit,
-            tokenizer=Settings.tokenizer,
         )
     return _chat_memory
 
@@ -100,17 +99,37 @@ def retrieve_window(query: str) -> list[NodeWithScore]:
 def rerank_nodes(
     nodes: list[NodeWithScore], query: str
 ) -> list[NodeWithScore]:
-    """Apply CrossEncoder reranking to refine retrieval results."""
+    """Call Docker-hosted reranker service (TEI / Infinity compatible)."""
+    import httpx
+
     settings = get_settings()
-    reranker = SentenceTransformerRerank(
-        model="cross-encoder/ms-marco-MiniLM-L-6-v2",
-        top_n=settings.top_n,
-    )
-    return reranker.postprocess_nodes(nodes, query_str=query)
+    texts = [node.node.get_content() for node in nodes]
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.post(
+                settings.reranker_url,
+                json={"query": query, "passages": texts},
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+            # payload = {"results": [{"index": ..., "passage": ..., "score": ...}, ...]}
+            results = payload.get("results", payload)
+    except Exception as e:
+        print(f"Reranker 调用失败，跳过重排: {e}")
+        return nodes
+
+    # Build score lookup and reorder
+    score_map = {r["index"]: r["score"] for r in results}
+    for i, node in enumerate(nodes):
+        node.score = score_map.get(i, node.score)
+
+    nodes.sort(key=lambda n: n.score or 0.0, reverse=True)
+    return nodes[:settings.top_n]
 
 
 def retrieve(
-    question: str, strategy: str = "basic", use_rerank: bool = True
+    question: str, strategy: str = "basic", use_rerank: bool = False
 ) -> list[NodeWithScore]:
     """Full retrieval pipeline: rewrite -> strategy -> optional rerank."""
     # Step 1: Query rewriting
@@ -174,7 +193,7 @@ def get_sources(nodes: list[NodeWithScore]) -> list[dict]:
 
 
 def chat(
-    question: str, strategy: str = "basic", use_rerank: bool = True
+    question: str, strategy: str = "basic", use_rerank: bool = False
 ) -> tuple:
     """
     Execute full RAG pipeline.
@@ -188,7 +207,13 @@ def chat(
         )
 
     # Retrieve relevant nodes
+    settings = get_settings()
     nodes = retrieve(question, strategy, use_rerank)
+    print(f"[RAG] strategy={strategy} | rerank={use_rerank} | "
+          f"top_k={settings.top_k} | top_n={settings.top_n} | "
+          f"retrieved={len(nodes)} nodes | scores=["
+          + ", ".join(f"{n.score:.4f}" for n in nodes[:5])
+          + ("...]" if len(nodes) > 5 else "]"))
 
     # Build prompt
     prompt = build_prompt(question, nodes)
@@ -198,6 +223,6 @@ def chat(
 
     # Add user message to memory
     memory = get_chat_memory()
-    memory.put(question, "user")
+    memory.put(ChatMessage(content=question, role=MessageRole.USER))
 
     return prompt, sources, True

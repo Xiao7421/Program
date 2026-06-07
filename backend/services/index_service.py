@@ -1,4 +1,4 @@
-from pymilvus import connections, utility, Collection
+from pymilvus import MilvusClient
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.core import VectorStoreIndex, Settings
 from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
@@ -10,6 +10,11 @@ _vector_store: Optional[MilvusVectorStore] = None
 _vector_index: Optional[VectorStoreIndex] = None
 
 
+def _get_milvus_uri() -> str:
+    s = get_settings()
+    return f"http://{s.milvus_host}:{s.milvus_port}"
+
+
 def setup_callback_manager() -> None:
     llama_debug = LlamaDebugHandler(print_trace_on_end=False)
     callback_manager = CallbackManager([llama_debug])
@@ -17,22 +22,15 @@ def setup_callback_manager() -> None:
 
 
 def connect_milvus() -> None:
-    settings = get_settings()
-    connections.connect(
-        alias="default",
-        host=settings.milvus_host,
-        port=str(settings.milvus_port),
-    )
+    # Verify Milvus is reachable by instantiating a client
+    client = MilvusClient(uri=_get_milvus_uri())
+    client.list_collections()
 
 
 def is_milvus_connected() -> bool:
     try:
-        connections.connect(
-            alias="check",
-            host=get_settings().milvus_host,
-            port=str(get_settings().milvus_port),
-        )
-        connections.disconnect("check")
+        client = MilvusClient(uri=_get_milvus_uri())
+        client.list_collections()
         return True
     except Exception:
         return False
@@ -43,7 +41,7 @@ def get_vector_store() -> MilvusVectorStore:
     if _vector_store is None:
         settings = get_settings()
         _vector_store = MilvusVectorStore(
-            uri=f"http://{settings.milvus_host}:{settings.milvus_port}",
+            uri=_get_milvus_uri(),
             collection_name=settings.milvus_collection,
             dim=settings.embedding_dim,
             overwrite=False,
@@ -70,11 +68,9 @@ def reset_vector_index() -> None:
 def get_collection_count() -> int:
     settings = get_settings()
     try:
-        if utility.has_collection(settings.milvus_collection):
-            collection = Collection(settings.milvus_collection)
-            collection.load()
-            return collection.num_entities
-        return 0
+        client = MilvusClient(uri=_get_milvus_uri())
+        stats = client.get_collection_stats(settings.milvus_collection)
+        return stats.get("row_count", 0)
     except Exception:
         return 0
 
@@ -82,16 +78,20 @@ def get_collection_count() -> int:
 def delete_entities_by_file_id(file_id: str) -> int:
     settings = get_settings()
     try:
-        if utility.has_collection(settings.milvus_collection):
-            collection = Collection(settings.milvus_collection)
-            collection.load()
-            expr = f'file_id == "{file_id}"'
-            result = collection.query(expr=expr, output_fields=["id"])
-            if result:
-                ids = [r["id"] for r in result]
-                collection.delete(f"id in {ids}")
-                collection.flush()
-                return len(ids)
+        client = MilvusClient(uri=_get_milvus_uri())
+        expr = f'file_id == "{file_id}"'
+        result = client.query(
+            collection_name=settings.milvus_collection,
+            filter=expr,
+            output_fields=["id"],
+        )
+        if result:
+            ids = [r["id"] for r in result]
+            client.delete(
+                collection_name=settings.milvus_collection,
+                filter=f"id in {ids}",
+            )
+            return len(ids)
     except Exception:
         pass
     return 0

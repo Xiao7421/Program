@@ -10,12 +10,12 @@ ENV_FILE = str(PROJECT_ROOT / ".env")
 
 class Settings(BaseSettings):
     # DeepSeek LLM
-    deepseek_api_key: str = ""
-    deepseek_base_url: str = "https://api.deepseek.com/v1"
-    deepseek_model: str = "deepseek-chat"
+    deepseek_api_key: str = "sk-c7bf69b1ca51407fb31063e6961fc1c7"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-v4-flash"
 
     # DashScope Embedding
-    dashscope_api_key: str = ""
+    dashscope_api_key: str = "sk-ed99b70131734eba9202ecb8fb004edb"
 
     # Milvus
     milvus_host: str = "localhost"
@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     top_n: int = 5
     chat_token_limit: int = 3000
 
+    # Reranker (Docker service, e.g. TEI / Infinity)
+    reranker_url: str = "http://localhost:8081/rerank"
+
     # File Upload
     max_file_size_mb: int = 50
     upload_dir: str = "./uploads"
@@ -38,7 +41,7 @@ class Settings(BaseSettings):
 
     # Defaults
     default_strategy: str = "basic"
-    default_use_rerank: bool = True
+    default_use_rerank: bool = False
 
     model_config = {
         "env_file": ENV_FILE,

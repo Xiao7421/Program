@@ -22,6 +22,7 @@ from services.document_service import (
     delete_document, get_document_count, get_total_chunks,
 )
 from services.query_service import chat, get_chat_memory
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
 
 app = FastAPI(title="企业级RAG知识库助手", version="1.0.0")
 
@@ -39,13 +40,31 @@ FRONTEND_DIR = str(PROJECT_ROOT / "frontend")
 
 @app.on_event("startup")
 async def startup():
+    import httpx
+
+    settings = get_settings()
+
     setup_callback_manager()
     get_embedding()
     get_llm()
+
+    # Milvus health check
     try:
         connect_milvus()
+        print(f"✅ Milvus 连接成功 — {settings.milvus_host}:{settings.milvus_port}")
     except Exception as e:
-        print(f"警告: Milvus连接失败 — {e}")
+        print(f"❌ Milvus 连接失败 — {settings.milvus_host}:{settings.milvus_port}: {e}")
+
+    # Reranker health check
+    try:
+        with httpx.Client(timeout=5) as client:
+            resp = client.get(settings.reranker_url.replace("/rerank", "/health"))
+            if resp.is_success:
+                print(f"✅ Reranker 连接成功 — {settings.reranker_url}")
+            else:
+                print(f"⚠️  Reranker 健康检查异常 — {settings.reranker_url} (HTTP {resp.status_code})")
+    except Exception as e:
+        print(f"❌ Reranker 连接失败 — {settings.reranker_url}: {e}")
 
 
 @app.post("/api/upload", response_model=UploadResponse)
@@ -134,7 +153,7 @@ async def chat_endpoint(request: ChatRequest):
 
             # Save assistant response to memory
             memory = get_chat_memory()
-            memory.put(full_response, "assistant")
+            memory.put(ChatMessage(content=full_response, role=MessageRole.ASSISTANT))
 
         except Exception as e:
             error_event = json_module.dumps(
@@ -157,7 +176,7 @@ async def get_config():
         default_strategy=settings.default_strategy,
         rerank_enabled=settings.default_use_rerank,
         llm_model=settings.deepseek_model,
-        embedding_model="text-embedding-v2",
+        embedding_model="text-embedding-v4",
     )
 
 
